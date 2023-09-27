@@ -49,6 +49,17 @@ PB2,3,4,5 -> DECODIFICADOR
 
 #define tiempo_rebote 6 // ms
 
+enum UMBRAL
+{
+    U1 = 50,
+    U2 = 400
+};
+
+int habilitado = -1; // 1 -> habilitado; -1 -> deshabilitado
+int umbral = U1;
+int contador = 0;
+
+void cambiar_umbral();
 void bcd_al_display();
 
 int main(void)
@@ -64,31 +75,57 @@ int main(void)
     DDRC = 0xFF;
     PORTC = 0x00;
 
-    int estado_habilitar = 1;
-    int ultimo_estado_habilitar = 1;
-
     while (1)
     {
-        estado_habilitar = (PIND & (1 << PIND3));
-        if (estado_habilitar != ultimo_estado_habilitar)
+
+        // Habilitar o deshabilitar el conteo
+        if (!(PIND & (1 << PIND3)))
         {
-            if (!estado_habilitar)
+            _delay_ms(tiempo_rebote);
+            if (!(PIND & (1 << PIND3)))
             {
-                _delay_ms(tiempo_rebote);
-                if (!estado_habilitar)
-                {
-                    PORTB |= (1 << ALARMA);
-                    _delay_ms(1000);
-                    PORTB &= ~(1 << ALARMA);
-                }
+                habilitado *= -1;
             }
-            else
-                _delay_ms(100);
         }
-        ultimo_estado_habilitar = estado_habilitar;
+
+        // Cambiar el umbral
+        if (!(PIND & (1 << PIND2)))
+        {
+            _delay_ms(tiempo_rebote);
+            if (!(PIND & (1 << PIND2)))
+            {
+                cambiar_umbral();
+            }
+        }
+
+        // Incrementar el contador si esta habilitado
+        if (!(PIND & (1 << PIND4)))
+        {
+            _delay_ms(tiempo_rebote);
+            if (!(PIND & (1 << PIND4)))
+            {
+                if (habilitado == 1)
+                    contador += 1;
+            }
+        }
     }
 
     return 0;
+}
+
+void cambiar_umbral()
+{
+    switch (umbral)
+    {
+    case U1:
+        umbral = U2;
+        contador = 0;
+        break;
+    case U2:
+        umbral = U1;
+        contador = 0;
+        break;
+    }
 }
 
 void bcd_al_display()
