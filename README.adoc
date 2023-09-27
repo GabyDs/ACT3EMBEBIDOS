@@ -1,0 +1,104 @@
+= PlatformIO template for native AVR projects
+
+== Rationale
+
+So your are teaching low-level Atmel AVR microcontroller programming but:
+
+* Do not want to use Atmel/Microchip Studio software because it is non-free and
+is Windows-only.
+* You may want to intermix assembly and C code so you want to use the GNU
+toolchain and avr-libc.
+* You want to be able to be able to debug your code with a simulator
+* Your want to upload your code to a cheap Arduino UNO board or similar.
+
+No problem, you have at least two options:
+
+* Use the toolchain directly: write your code in a text editor and execute the
+toolchain in a terminal. It is easy to install in Linux systems (and probably in
+that kind of Linux subsystem now included with MS Windows). It is also easy to
+use if you have some guidelines that you can find in
+https://gitlab.com/jjchico-edc/avr-bare[this very interesting tutorial].
+
+* Configure https://platformio.org/[PlatformIO] to use the AVR toolchain alone
+(native mode) whithout any specific framework. PlatformIO is a nice development
+platform and IDE for embedded systems. It will handle all details for you so you
+can simply _build_, _debug_ and _upload_ your design, including the toochain
+install. PlatformIO IDE is an extension to Microsoft's Visual Studio Code.
+
+This repo is a template that you can download and use as a PlatformIO project
+folder for native AVR development. If you are new to AVR programming, the
+https://gitlab.com/jjchico-edc/avr-bare[above-mentioned tutorial] is a great
+introduction and starting point.
+
+== Quick start
+
+. Install Visual Studio Code from the Microsoft web page. Unfortunately,
+despite being a Free project, PlatformIO only works with the non-free Visual
+Studio Code (TM) product from Microsoft and not with other free products derived
+from the VSCode open-source code base like https://vscodium.com/[VSCdium].
+People is working on that so it may be possible that it is already solved at the
+time you read it.
+
+. Install the _PlatformIO IDE_ extension to Visual Studio Code. You may also
+want to install the _AVR Support_ extension if you want to have AVR assembly
+syntax highlighting.
+
+. Download this repo and uncompress it in a folder. You will probably want to
+change the name of your folder to one that better suits your project.
+
+. Use the PlatformIO IDE open project option and direct it to the folder.
+
+. Take a look to the _platformio.ini_ file. I have left some comments there for
+you to see what's going on. You can now debug the sample project by clicking on
+_PIO Debug_ from the Debug tab and upload the code to an Arduino UNO board, if
+you have one attached to your computer by selecting the _Upload_ option from the
+PlatformIO tab.
+
+. Write your own code. Source files are in the _src_ folder. Modify the sample
+assembly file, substitute it by a C or C\++ file, add more C or C++ files, etc.
+See the PlatformIO documentation as needed.
+
+== Alternate usage
+
+(Do 1 and 2 of the quick install).
+
+[start=3]
+. Create a new project in PlatformIO IDE using using a board supported by the
+_atmelavr_ platforma, like the _Arduino UNO_.
+
+. Copy the _atmega328p.svd_ file in this repo to your project's folder.
+
+. Edit the project's _platformio.ini_ file and remove (or comment-out) the
+_framework_ line and add debug and SVD path configurations:
+
+----
+    [env:uno]
+    platform = atmelavr
+    board = uno
+    ;framework = arduino
+
+    ; Use the simulator for debugging
+    debug_tool = simavr
+
+    ; Use this file for peripheral definitions, that will be shown by the debugger.
+    debug_svd_path = atmega328p.svd
+----
+
+== About SVD files
+
+The _.svd_ file included defines the format of I/O registers in the ATmega328P
+MCU so that the debugger interface can populate the Peripherals window as
+debugging progresses. If you use a board with a different MCU, install
+a new _.svd_ file and modify _platformio.ini_ accordingly.
+
+== Author
+
+Jorge Juan-Chico <jjchico@dte.us.es>
+
+== LICENSE
+
+This project and all the files included is free software unless otherwise
+stated: you can redistribute it and/or modify it under the terms of the GNU
+General Public License as published by the Free Software Foundation, either
+version 3 of the License, or (at your option) any later version. See
+<http://www.gnu.org/licenses/>.
