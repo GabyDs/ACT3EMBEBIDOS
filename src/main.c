@@ -32,6 +32,8 @@ PB2,3,4,5 -> DECODIFICADOR
 
 */
 
+#include <stdlib.h>
+
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
@@ -60,7 +62,7 @@ int umbral = U1;
 int contador = 0;
 
 void cambiar_umbral();
-void bcd_al_display();
+void bcd_al_display(int);
 
 int main(void)
 {
@@ -94,6 +96,7 @@ int main(void)
             _delay_ms(tiempo_rebote);
             if (!(PIND & (1 << PIND2)))
             {
+                contador = 0;
                 cambiar_umbral();
             }
         }
@@ -105,7 +108,11 @@ int main(void)
             if (!(PIND & (1 << PIND4)))
             {
                 if (habilitado == 1)
+                {
                     contador += 1;
+                    bcd_al_display(contador);
+                    _delay_ms(1000);
+                }
             }
         }
     }
@@ -128,6 +135,25 @@ void cambiar_umbral()
     }
 }
 
-void bcd_al_display()
+void bcd_al_display(int cont)
 {
+    // int unidad = cont % 10;
+    //  int decena = (cont % 100) / 10;
+    //  int centena = cont / 100;
+
+    // Habilitar Q1
+    PORTC &= ~(1 << Q1);
+
+    // Convertir a binario y mostrar en los pines B0, B1, B2, B3
+    for (int i = 0; i < 4; i++)
+    {
+        if (cont & (1 << i))
+        {
+            PORTB |= (1 << (B0 - i)); // Encender el pin correspondiente
+        }
+        else
+        {
+            PORTB &= ~(1 << (B0 - i)); // Apagar el pin correspondiente
+        }
+    }
 }
