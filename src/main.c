@@ -37,16 +37,9 @@ PB2,3,4,5 -> DECODIFICADOR
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
-#define F_CPU 16000000L
 
-// Salidas
-#define Q1 PORTC0
-#define Q2 PORTC1
-#define Q3 PORTC2
-#define B0 PORTB5
-#define B1 PORTB4
-#define B2 PORTB3
-#define B3 PORTB2
+#define F_CPU 16000000L // Frecuencia del atmega328p
+
 #define ALARMA PORTB0
 
 #define tiempo_rebote 6 // ms
@@ -57,12 +50,31 @@ enum UMBRAL
     U2 = 400
 };
 
+enum DISPLAY
+{
+    Q1 = PORTC0,
+    Q2 = PORTC1,
+    Q3 = PORT2
+};
+
+enum BCD
+{
+    B0 = PORTB5,
+    B1 = PORTB4,
+    B2 = PORTB3,
+    B3 = PORTB2
+};
+
 int habilitado = -1; // 1 -> habilitado; -1 -> deshabilitado
 int umbral = U1;
-int contador = 0;
+int contador = 125;
+int estado_display = Q1;
+int unidad, decena, centena = 0;
 
 void cambiar_umbral();
-void bcd_al_display(int);
+void encender_display(int);
+void visualizar_display(int);
+void ciclar_display();
 
 int main(void)
 {
@@ -75,7 +87,7 @@ int main(void)
     PORTB = 0x00;
 
     DDRC = 0xFF;
-    PORTC = 0x00;
+    PORTC = 0xFF;
 
     while (1)
     {
@@ -110,11 +122,11 @@ int main(void)
                 if (habilitado == 1)
                 {
                     contador += 1;
-                    bcd_al_display(contador);
-                    _delay_ms(1000);
+                    _delay_ms(100);
                 }
             }
         }
+        visualizar_display(contador);
     }
 
     return 0;
@@ -135,19 +147,15 @@ void cambiar_umbral()
     }
 }
 
-void bcd_al_display(int cont)
+void encender_display(int num)
 {
-    // int unidad = cont % 10;
-    //  int decena = (cont % 100) / 10;
-    //  int centena = cont / 100;
-
-    // Habilitar Q1
-    PORTC &= ~(1 << Q1);
+    // Habilitamos el display
+    PORTC &= ~(1 << estado_display);
 
     // Convertir a binario y mostrar en los pines B0, B1, B2, B3
     for (int i = 0; i < 4; i++)
     {
-        if (cont & (1 << i))
+        if (num & (1 << i))
         {
             PORTB |= (1 << (B0 - i)); // Encender el pin correspondiente
         }
@@ -155,5 +163,41 @@ void bcd_al_display(int cont)
         {
             PORTB &= ~(1 << (B0 - i)); // Apagar el pin correspondiente
         }
+    }
+}
+
+void visualizar_display(int cont)
+{
+    unidad = cont % 10;
+    decena = (cont % 100) / 10;
+    centena = cont / 100;
+
+    encender_display(unidad);
+    _delay_ms(1000);
+    ciclar_display();
+
+    encender_display(decena);
+    _delay_ms(1000);
+    ciclar_display();
+
+    encender_display(centena);
+    _delay_ms(1000);
+    ciclar_display();
+}
+
+void ciclar_display()
+{
+    PORTC = 0xFF;
+    switch (estado_display)
+    {
+    case Q1:
+        estado_display = Q2;
+        break;
+    case Q2:
+        estado_display = Q3;
+        break;
+    case Q3:
+        estado_display = Q1;
+        break;
     }
 }
