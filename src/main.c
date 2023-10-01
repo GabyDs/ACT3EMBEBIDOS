@@ -6,17 +6,9 @@
 
 #define ALARMA PORTB0
 
-#define tiempo_rebote 6 // ms
-
-#define VPC0 100
+#define tiempo_rebote 10 // ms
 
 #define OCR0A_display 199
-
-enum UMBRAL
-{
-    U1 = 50,
-    U2 = 400
-};
 
 enum DISPLAY
 {
@@ -25,42 +17,20 @@ enum DISPLAY
     Q3 = PORT2
 };
 
-enum BCD
-{
-    B0 = PORTB5,
-    B1 = PORTB4,
-    B2 = PORTB3,
-    B3 = PORTB2
-};
-
 volatile int habilitado = -1; // 1 -> habilitado; -1 -> deshabilitado
-volatile int umbral = U1;
-volatile int contador = 125;
+volatile int umbral = 50;     // umbral -> 50-400
+volatile int contador = 45;
 
-int estado_display = Q1;
-int unidad, decena, centena = 0;
+uint8_t estado_display = Q1;
+uint8_t unidad, decena, centena = 0;
+uint8_t estadoPD2;
+uint8_t ultimo_estadoPD2 = 1;
+uint8_t estadoPD3;
+uint8_t ultimo_estadoPD3 = 1;
+uint8_t estadoPD4;
+uint8_t ultimo_estadoPD4 = 1;
 
-void cambiar_umbral();
 void ciclar_display(int);
-
-ISR(INT0_vect)
-{
-    _delay_ms(tiempo_rebote);
-    if (!(PIND & (1 << PIND2)))
-    {
-        contador = 0;
-        cambiar_umbral();
-    }
-}
-
-ISR(INT1_vect)
-{
-    _delay_ms(tiempo_rebote);
-    if (!(PIND & (1 << PIND3)))
-    {
-        habilitado *= -1;
-    }
-}
 
 ISR(TIMER0_COMPA_vect)
 {
@@ -72,12 +42,6 @@ ISR(TIMER0_COMPA_vect)
 
 int main(void)
 {
-    // Interrupciones
-
-    // Externas
-    EICRA |= (1 << ISC01) | (1 << ISC11);
-    EIMSK |= (1 << INT0) | (1 << INT1);
-
     // Timer
     TCCR0A = (1 << WGM01);              // CTC mode
     OCR0A = OCR0A_display;              // TOP -> aprox 15ms
@@ -97,34 +61,49 @@ int main(void)
 
     while (1)
     {
-        // Incrementar el contador si esta habilitado
-        if (!(PIND & (1 << PIND4)))
+        estadoPD4 = (PIND & (1 << PIND4));
+        if (estadoPD4 != ultimo_estadoPD4)
         {
-            _delay_ms(tiempo_rebote);
-            if (!(PIND & (1 << PIND4)))
+            if (!estado_display)
             {
-                if (habilitado == 1)
-                    contador += 1;
+                _delay_ms(10 * tiempo_rebote);
+                if (!(PIND & (1 << PIND4)))
+                {
+                    if (habilitado == 1) // Incrementar el contador si esta habilitado
+                        contador += 1;
+                }
+            }
+        }
+
+        estadoPD3 = (PIND & (1 << PIND3));
+        if (estadoPD3 != ultimo_estadoPD3)
+        {
+            if (!estadoPD3)
+            {
+                _delay_ms(10 * tiempo_rebote);
+                if (!(PIND & (1 << PIND3)))
+                    habilitado *= -1; // Habilitar el conteo
+            }
+        }
+
+        estadoPD2 = (PIND & (1 << PIND2));
+        if (estadoPD2 != ultimo_estadoPD2) // es decir que cambio el estado
+        {
+            if (!estadoPD2)
+            {
+                _delay_ms(10 * tiempo_rebote);
+                if (!(PIND & (1 << PIND2)))
+                {
+                    umbral += 1; // Incrementa el umbral
+                    contador = 0;
+
+                    if (umbral > 400)
+                        umbral = 50;
+                }
             }
         }
     }
-
     return 0;
-}
-
-void cambiar_umbral()
-{
-    switch (umbral)
-    {
-    case U1:
-        umbral = U2;
-        contador = 0;
-        break;
-    case U2:
-        umbral = U1;
-        contador = 0;
-        break;
-    }
 }
 
 void ciclar_display(int num)
@@ -135,25 +114,19 @@ void ciclar_display(int num)
     case Q1:
         // Habilitamos el display
         PORTC &= ~(1 << estado_display);
-
         PORTB = num % 10;
-
         estado_display = Q2;
         break;
     case Q2:
         // Habilitamos el display
         PORTC &= ~(1 << estado_display);
-
         PORTB = (num % 100) / 10;
-
         estado_display = Q3;
         break;
     case Q3:
         // Habilitamos el display
         PORTC &= ~(1 << estado_display);
-
         PORTB = num / 100;
-
         estado_display = Q1;
         break;
     }
